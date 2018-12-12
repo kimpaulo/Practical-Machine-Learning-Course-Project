@@ -1,0 +1,112 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "Kim Paulo D. Magboo"
+date: "December 12, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, the goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Data Sources
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. 
+
+## Datasets 
+
+```{r getdata}
+set.seed(12345)
+
+Url_train <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+Url_test <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+train <- read.csv(url(Url_train), na.strings=c("NA","#DIV/0!",""))
+test <- read.csv(url(Url_test), na.strings=c("NA","#DIV/0!",""))
+```
+
+# Data Partition
+```{r partition}
+inTrain <- createDataPartition(train$classe, p=0.7, list=FALSE)
+myTraining <- train[inTrain, ]
+myTesting <- train[-inTrain, ]
+dim(myTraining); dim(myTesting)
+
+str(myTraining)
+```
+
+## Data Clean-up
+```{r cleanup}
+
+#Remove Variables with more than 90% NA using the Training dataset
+indColToRemove <- which(colSums(is.na(myTraining)|myTraining=="")>0.9*dim(myTraining)[1]) 
+Train_Clean <- myTraining[,-indColToRemove]
+Train_Clean <- Train_Clean[,-c(1:7)]
+dim(Train_Clean)
+
+#Remove Variables with more than 90% NA using the Test dataset
+indColToRemove <- which(colSums(is.na(myTesting)|myTesting=="")>0.9*dim(myTesting)[1]) 
+Test_Clean <- myTesting[,-indColToRemove]
+Test_Clean <- Test_Clean[,-1]
+dim(Test_Clean)
+```
+## Model Estimation
+
+In this section, we will develop 2 models: decision tree and random forest.Cross-validation with 3 folds will be utilized to limit the effects of overfitting and improve the accuracy of the models.
+
+```{r models}
+
+#Model Development using Decision Tree
+trControl <- trainControl(method="cv", number=3)
+dt <- train(classe~., data=Train_Clean, method="rpart", trControl=trControl)
+fancyRpartPlot(dt$finalModel)
+trainpred <- predict(dt,newdata=Test_Clean)
+confMatdt <- confusionMatrix(Test_Clean$classe,trainpred)
+confMatdt
+
+#Model Development using Random Forest
+rf <- train(classe~., data=Train_Clean, method="rf", trControl=trControl, verbose=FALSE)
+print(rf)
+trainpred <- predict(rf,newdata=Test_Clean)
+confMatRF <- confusionMatrix(Test_Clean$classe,trainpred)
+confMatRF
+```
+
+Based on the results, the model using random forest obtained higher accuracy rate of 99.15% as compared to that of the model with an accuract rate of 49.24%. Using the random forest model, the estimated out-of sample error is about 0.85%.
+
+##Prediction
+```{r prediction}
+predValidation <- predict(rf, newdata=test)
+Results <- data.frame(
+  problem_id=test$problem_id,
+  predicted=predValidation
+)
+print(Results)
+
+Results<- as.character (Results)
+
+#Create a text file for the Prediction
+write_files <- function(x) {
+    n <- length(x)
+    for(i in 1:n) {
+        filename <- paste0("problem_id_", i, ".txt")
+        write.table(x[i], file=filename, quote=F, row.names=F, col.names=F)
+    }
+}
+
+write_files(Results)
+```
+
+
