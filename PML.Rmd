@@ -84,7 +84,7 @@ confMatRF <- confusionMatrix(Test_Clean$classe,trainpred)
 confMatRF
 ```
 
-Based on the results, the model using random forest obtained higher accuracy rate of 99.15% as compared to that of the model with an accuract rate of 49.24%. Using the random forest model, the estimated out-of sample error is about 0.85%.
+Based on the results, the model using random forest obtained higher accuracy rate of 98.93% as compared to that of the model with an accuract rate of 49.63%. Using the random forest model, the estimated out-of sample error is about 1.07%.
 
 ##Prediction
 ```{r prediction}
